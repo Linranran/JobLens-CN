@@ -1,6 +1,8 @@
 .DS_Store
 .idea/
 .vscode/
+.agents/
+.claude/
 __pycache__/
 *.py[cod]
 *.egg-info/
