@@ -83,6 +83,81 @@ joblens import-bundle jobs.json \
 
 `import-bundle` 按来源岗位 ID 合并两个文件，移除请求令牌、内部加密 ID、招聘者状态等字段，并记录本次导入的新增、更新、未变化和缺少详情数量。原始文件建议只放在被 Git 忽略的 `data/private/` 中。
 
+## 配合 boss-zhipin-scraper 使用
+
+[boss-zhipin-scraper](https://github.com/eatmoreduck/boss-zhipin-scraper) 可以作为 JobLens-CN 的可选上游数据工具。两个项目彼此独立：scraper 在 BOSS 专用浏览器中由用户手动运行并导出 JSON，JobLens 只负责离线清洗、合并、入库和分析，不读取 Cookie，也不会自动操作招聘网站。
+
+### 1. 安装并定位 scraper
+
+```bash
+npx skills add eatmoreduck/boss-zhipin-scraper
+
+BOSS_SCRIPT="$HOME/.agents/skills/boss-zhipin-scraper/scripts/boss_cdp_raw.py"
+test -f "$BOSS_SCRIPT" && echo "found: $BOSS_SCRIPT"
+```
+
+scraper 需要 Chrome、Python 3.10+、`requests` 和 `websocket-client`。请在自己的隔离环境中安装依赖：
+
+```bash
+python3 -m venv "$HOME/.boss-zhipin-scraper/venv"
+BOSS_PYTHON="$HOME/.boss-zhipin-scraper/venv/bin/python"
+"$BOSS_PYTHON" -m pip install requests websocket-client
+"$BOSS_PYTHON" "$BOSS_SCRIPT" --version
+```
+
+后续命令默认在同一个终端执行，因此会复用上面的 `BOSS_SCRIPT` 和 `BOSS_PYTHON`；scraper 的环境与 JobLens 的 `.venv` 相互独立。
+
+### 2. 准备专用浏览器
+
+```bash
+"$BOSS_PYTHON" "$BOSS_SCRIPT" --check --cdp-port 9222
+"$BOSS_PYTHON" "$BOSS_SCRIPT" --setup-chrome --cdp-port 9222
+```
+
+首次使用时，在弹出的 BOSS 专用 Chrome 中手动登录。它使用独立且持久的浏览器 profile，不应把 Cookie、登录态或 profile 复制到本仓库。
+
+### 3. 导出列表和 JD 详情
+
+下面以“多模态算法”为例，并显式指定两个输出文件，方便后续导入：
+
+```bash
+mkdir -p data/private/boss
+
+"$BOSS_PYTHON" "$BOSS_SCRIPT" \
+  --keyword "多模态算法" \
+  --city 北京 \
+  --pages 3 \
+  --detail \
+  --output data/private/boss/jobs.json \
+  --detail-output data/private/boss/details.json
+```
+
+如果只想先验证环境，可运行：
+
+```bash
+"$BOSS_PYTHON" "$BOSS_SCRIPT" --smoke-test --cdp-port 9222
+```
+
+### 4. 预览并导入 JobLens
+
+```bash
+joblens import-bundle data/private/boss/jobs.json \
+  --details data/private/boss/details.json \
+  --source boss-manual-export \
+  --dry-run
+
+joblens import-bundle data/private/boss/jobs.json \
+  --details data/private/boss/details.json \
+  --source boss-manual-export
+
+joblens imports
+joblens dashboard
+```
+
+重复抓取和导入时保持相同的 `--source`，JobLens 会根据来源岗位 ID 更新记录并保存 JD 版本，而不是简单重复新增。列表和详情应通过一次 `import-bundle` 合并导入，不要分别执行普通 `joblens import`。
+
+> 请仅将该流程用于你有权处理的个人求职数据，并遵守目标网站的服务条款、访问限制和适用法律。控制抓取频率；不要提交原始 JSON、Cookie、登录态、请求令牌、招聘者个人信息或浏览器 profile。`data/private/` 已默认加入 Git 忽略规则。
+
 使用本地候选人画像评分：
 
 ```bash

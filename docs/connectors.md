@@ -22,6 +22,24 @@ JobLens core is source-agnostic. A connector should produce canonical JSON or ca
 
 Site-specific authenticated automation should live outside the public core unless the platform explicitly permits it.
 
+## Optional BOSS offline workflow
+
+The external [boss-zhipin-scraper](https://github.com/eatmoreduck/boss-zhipin-scraper)
+skill can be used as an optional upstream exporter. It is not bundled, imported, or invoked by
+JobLens. Keep its authenticated browser profile outside this repository, export a list JSON and
+a detail JSON into `data/private/`, and then use the offline bundle importer:
+
+```bash
+joblens import-bundle data/private/boss/jobs.json \
+  --details data/private/boss/details.json \
+  --source boss-manual-export \
+  --dry-run
+```
+
+Review the preview before repeating the command without `--dry-run`. Use the same stable source
+name for later snapshots so that JobLens can update existing jobs and retain JD history. The
+step-by-step installation, browser setup and export commands are documented in the main README.
+
 ## Offline list/details bundles
 
 Tools that export a lightweight job list and a separate JD-detail file can be used without
