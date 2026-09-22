@@ -15,6 +15,16 @@ def parse_db() -> Path:
     return Path(args.db).expanduser().resolve()
 
 
+def selected_job_id_from_rows(rows: list[dict], selected_rows: list[int]) -> str | None:
+    """Resolve a dataframe row-selection event to a stable job ID."""
+    if not selected_rows:
+        return None
+    index = selected_rows[0]
+    if index < 0 or index >= len(rows):
+        return None
+    return str(rows[index]["job_id"])
+
+
 def main():
     import streamlit as st
 
@@ -109,10 +119,44 @@ def main():
         }
         for row in rows
     ]
-    st.dataframe(table, width="stretch", hide_index=True)
+    st.caption("点击岗位列表中的任意一行，可自动在下方展示岗位详情。")
+
+    def choose_from_table() -> None:
+        table_state = st.session_state.get("job_table")
+        selected_rows = list(table_state.selection.rows) if table_state else []
+        clicked_job_id = selected_job_id_from_rows(rows, selected_rows)
+        if clicked_job_id:
+            st.session_state["selected_job_id"] = clicked_job_id
+            st.session_state["job_inspector"] = clicked_job_id
+
+    st.dataframe(
+        table,
+        width="stretch",
+        hide_index=True,
+        key="job_table",
+        on_select=choose_from_table,
+        selection_mode="single-row",
+    )
     if rows:
-        labels = [f"{row['company']} · {row['title']}" for row in rows]
-        selected = rows[labels.index(st.selectbox("Inspect a job", labels))]
+        job_ids = [str(row["job_id"]) for row in rows]
+        labels = {str(row["job_id"]): f"{row['company']} · {row['title']}" for row in rows}
+        selected_job_id = st.session_state.get("job_inspector") or st.session_state.get(
+            "selected_job_id"
+        )
+        if selected_job_id not in job_ids:
+            selected_job_id = job_ids[0]
+
+        # This assignment happens before the selectbox is instantiated, so a table click
+        # and a dropdown selection stay in sync without requiring a second user action.
+        st.session_state["job_inspector"] = selected_job_id
+        selected_job_id = st.selectbox(
+            "岗位详情（也可下拉选择）",
+            job_ids,
+            format_func=labels.__getitem__,
+            key="job_inspector",
+        )
+        st.session_state["selected_job_id"] = selected_job_id
+        selected = next(row for row in rows if str(row["job_id"]) == selected_job_id)
         left, right = st.columns([2, 1])
         with left:
             st.markdown(f"### {selected['title']}")
