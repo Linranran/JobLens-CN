@@ -68,6 +68,21 @@ joblens import jobs.json
 joblens import jobs.csv
 ```
 
+如果数据工具分别导出岗位列表和详情 JSON，可先离线合并、清洗并预览：
+
+```bash
+joblens import-bundle jobs.json \
+  --details details.json \
+  --source manual-json \
+  --dry-run
+
+joblens import-bundle jobs.json \
+  --details details.json \
+  --source manual-json
+```
+
+`import-bundle` 按来源岗位 ID 合并两个文件，移除请求令牌、内部加密 ID、招聘者状态等字段，并记录本次导入的新增、更新、未变化和缺少详情数量。原始文件建议只放在被 Git 忽略的 `data/private/` 中。
+
 使用本地候选人画像评分：
 
 ```bash
@@ -111,6 +126,8 @@ joblens export --output out/jobs.json
 |---|---|
 | `joblens init` | 初始化 SQLite 数据库 |
 | `joblens import FILE` | 导入 JSON 或 CSV |
+| `joblens import-bundle FILE --details FILE` | 合并并清洗离线列表/详情 JSON |
+| `joblens imports` | 查看最近的导入批次 |
 | `joblens score --profile FILE` | 运行可解释匹配 |
 | `joblens report` | 生成公司—岗位 Markdown 报告 |
 | `joblens history JOB_ID` | 查看最近两版 JD 的差异 |
@@ -138,6 +155,7 @@ joblens export --output out/jobs.json
 - [x] 本地 Streamlit Dashboard
 - [ ] BM25 / Embedding 可选语义匹配
 - [ ] Greenhouse、Lever、Ashby 公共职位源连接器
+- [x] 离线列表/详情双文件合并与导入审计
 - [ ] 投递状态与面试流程看板
 - [ ] 中英文界面
 - [ ] 可选本地 LLM 分析

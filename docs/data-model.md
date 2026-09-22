@@ -40,6 +40,12 @@ JobLens stores normalized records in SQLite and uses JSON only for import/export
 
 A new `job_versions` row is created when any of title, salary, location, or description changes. Duplicate imports do not create versions.
 
+## Import runs
+
+Each successful `import-bundle` execution creates an `import_runs` audit row with source,
+filenames, search metadata, observation time, merge coverage, and new/updated/unchanged counts.
+`--dry-run` never creates a database or audit row.
+
 ## Explicitly discarded fields
 
 Importers use a whitelist. Browser cookies, request/security tokens, internal encrypted IDs, recruiter private contact details and arbitrary page snapshots are not persisted.

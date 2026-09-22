@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -25,6 +26,23 @@ def selected_job_id_from_cells(
     if index < 0 or index >= len(rows):
         return None
     return str(rows[index]["job_id"])
+
+
+def freshness_status(last_seen: str, now: datetime | None = None) -> str:
+    """Classify recency without treating a missing search result as a closed job."""
+    try:
+        observed = datetime.fromisoformat(str(last_seen).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return "unknown"
+    if observed.tzinfo is None:
+        observed = observed.replace(tzinfo=timezone.utc)
+    current = now or datetime.now(timezone.utc)
+    days = max(0, (current.astimezone(timezone.utc) - observed.astimezone(timezone.utc)).days)
+    if days <= 7:
+        return "recent"
+    if days <= 30:
+        return "possibly_stale"
+    return "stale"
 
 
 def main():
@@ -74,13 +92,17 @@ def main():
         query = st.text_input("Search title / company / JD")
         location = st.selectbox("Location", ["All", *locations])
         status = st.selectbox("Status", ["All", *statuses])
+        freshness = st.selectbox(
+            "Freshness",
+            ["All", "最近更新", "可能过期", "长期未见", "未知"],
+        )
         minimum_score = st.slider("Minimum match score", 0, 100, 0)
 
     sql = """
         SELECT j.job_id, c.name AS company, j.title, j.salary, j.location, j.status,
                j.match_score, j.recommendation, j.matched_skills_json,
                j.missing_skills_json, j.match_explanation, j.description,
-               j.source_url, c.industry, c.introduction
+               j.source_url, j.last_seen, c.industry, c.introduction
         FROM jobs j JOIN companies c ON c.company_id=j.company_id WHERE 1=1
     """
     params: list[object] = []
@@ -100,6 +122,16 @@ def main():
     )
     params.append(minimum_score)
     rows = [dict(row) for row in connection.execute(sql, params)]
+    freshness_labels = {
+        "recent": "最近更新",
+        "possibly_stale": "可能过期",
+        "stale": "长期未见",
+        "unknown": "未知",
+    }
+    for row in rows:
+        row["freshness"] = freshness_labels[freshness_status(row["last_seen"])]
+    if freshness != "All":
+        rows = [row for row in rows if row["freshness"] == freshness]
     recommendation_labels = {
         "must_review": "重点关注",
         "recommended": "建议关注",
@@ -116,6 +148,7 @@ def main():
             "recommendation": recommendation_labels.get(
                 row["recommendation"], row["recommendation"]
             ),
+            "freshness": row["freshness"],
             "status": row["status"],
         }
         for row in rows

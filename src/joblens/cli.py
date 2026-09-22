@@ -10,7 +10,7 @@ from pathlib import Path
 
 from . import __version__
 from .db import connect, initialize
-from .importers import import_file
+from .importers import import_bundle, import_file
 from .matching import load_profile, score_database
 from .reports import build_report, export_public_json, version_diff
 
@@ -24,6 +24,17 @@ def command_init(args):
 def command_import(args):
     result = import_file(args.db, args.input)
     print(json.dumps(result, ensure_ascii=False))
+
+
+def command_import_bundle(args):
+    result = import_bundle(
+        args.db,
+        args.input,
+        args.details,
+        source_name=args.source,
+        dry_run=args.dry_run,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 def command_score(args):
@@ -48,13 +59,37 @@ def command_stats(args):
         scored = connection.execute(
             "SELECT COUNT(*) FROM jobs WHERE match_score IS NOT NULL"
         ).fetchone()[0]
+        imports = connection.execute("SELECT COUNT(*) FROM import_runs").fetchone()[0]
     print(
-        json.dumps({"companies": companies, "jobs": jobs, "versions": versions, "scored": scored})
+        json.dumps(
+            {
+                "companies": companies,
+                "jobs": jobs,
+                "versions": versions,
+                "scored": scored,
+                "imports": imports,
+            }
+        )
     )
 
 
 def command_history(args):
     print(version_diff(args.db, args.job_id))
+
+
+def command_imports(args):
+    initialize(args.db)
+    with connect(args.db) as connection:
+        rows = connection.execute(
+            """
+            SELECT run_id, source, input_name, details_name, query, city, observed_at,
+                   list_count, detail_count, matched_details, missing_details,
+                   details_only, imported, new_jobs, updated_jobs, unchanged_jobs
+            FROM import_runs ORDER BY created_at DESC LIMIT ?
+            """,
+            (args.limit,),
+        ).fetchall()
+    print(json.dumps([dict(row) for row in rows], ensure_ascii=False, indent=2))
 
 
 def command_demo(args):
@@ -99,6 +134,17 @@ def build_parser() -> argparse.ArgumentParser:
     importer.add_argument("--db", default=DEFAULT_DB)
     importer.set_defaults(func=command_import)
 
+    bundle = sub.add_parser(
+        "import-bundle",
+        help="Safely merge and import an offline list/details JSON export",
+    )
+    bundle.add_argument("input", help="List JSON file")
+    bundle.add_argument("--details", help="Optional details JSON file")
+    bundle.add_argument("--source", default="manual-json", help="Stable source namespace")
+    bundle.add_argument("--dry-run", action="store_true", help="Preview without writing the DB")
+    bundle.add_argument("--db", default=DEFAULT_DB)
+    bundle.set_defaults(func=command_import_bundle)
+
     scorer = sub.add_parser("score", help="Score jobs against a local candidate profile")
     scorer.add_argument("--profile", required=True)
     scorer.add_argument("--db", default=DEFAULT_DB)
@@ -122,6 +168,11 @@ def build_parser() -> argparse.ArgumentParser:
     history.add_argument("job_id")
     history.add_argument("--db", default=DEFAULT_DB)
     history.set_defaults(func=command_history)
+
+    imports = sub.add_parser("imports", help="Show recent offline import runs")
+    imports.add_argument("--limit", type=int, default=10)
+    imports.add_argument("--db", default=DEFAULT_DB)
+    imports.set_defaults(func=command_imports)
 
     demo = sub.add_parser("demo", help="Build a complete demo from synthetic data")
     demo.add_argument("--output", default="demo-output")

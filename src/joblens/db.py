@@ -75,10 +75,32 @@ CREATE TABLE IF NOT EXISTS job_versions (
     UNIQUE(job_id, content_hash)
 );
 
+CREATE TABLE IF NOT EXISTS import_runs (
+    run_id TEXT PRIMARY KEY,
+    source TEXT NOT NULL,
+    input_name TEXT NOT NULL,
+    details_name TEXT NOT NULL DEFAULT '',
+    query TEXT NOT NULL DEFAULT '',
+    city TEXT NOT NULL DEFAULT '',
+    filters_json TEXT NOT NULL DEFAULT '{}',
+    observed_at TEXT NOT NULL,
+    list_count INTEGER NOT NULL DEFAULT 0,
+    detail_count INTEGER NOT NULL DEFAULT 0,
+    matched_details INTEGER NOT NULL DEFAULT 0,
+    missing_details INTEGER NOT NULL DEFAULT 0,
+    details_only INTEGER NOT NULL DEFAULT 0,
+    imported INTEGER NOT NULL DEFAULT 0,
+    new_jobs INTEGER NOT NULL DEFAULT 0,
+    updated_jobs INTEGER NOT NULL DEFAULT 0,
+    unchanged_jobs INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_jobs_company ON jobs(company_id);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_jobs_score ON jobs(match_score DESC);
 CREATE INDEX IF NOT EXISTS idx_versions_job ON job_versions(job_id, version DESC);
+CREATE INDEX IF NOT EXISTS idx_import_runs_source ON import_runs(source, observed_at DESC);
 """
 
 
