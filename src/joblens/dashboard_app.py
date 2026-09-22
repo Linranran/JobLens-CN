@@ -15,11 +15,13 @@ def parse_db() -> Path:
     return Path(args.db).expanduser().resolve()
 
 
-def selected_job_id_from_rows(rows: list[dict], selected_rows: list[int]) -> str | None:
-    """Resolve a dataframe row-selection event to a stable job ID."""
-    if not selected_rows:
+def selected_job_id_from_cells(
+    rows: list[dict], selected_cells: list[tuple[int, str]]
+) -> str | None:
+    """Resolve a dataframe cell-selection event to a stable job ID."""
+    if not selected_cells:
         return None
-    index = selected_rows[0]
+    index = selected_cells[0][0]
     if index < 0 or index >= len(rows):
         return None
     return str(rows[index]["job_id"])
@@ -119,12 +121,12 @@ def main():
         }
         for row in rows
     ]
-    st.caption("点击岗位列表中的任意一行，可自动在下方展示岗位详情。")
+    st.caption("点击 company、title 等任意单元格，可自动在下方展示对应岗位详情。")
 
     def choose_from_table() -> None:
         table_state = st.session_state.get("job_table")
-        selected_rows = list(table_state.selection.rows) if table_state else []
-        clicked_job_id = selected_job_id_from_rows(rows, selected_rows)
+        selected_cells = list(table_state.selection.cells) if table_state else []
+        clicked_job_id = selected_job_id_from_cells(rows, selected_cells)
         if clicked_job_id:
             st.session_state["selected_job_id"] = clicked_job_id
             st.session_state["job_inspector"] = clicked_job_id
@@ -135,7 +137,7 @@ def main():
         hide_index=True,
         key="job_table",
         on_select=choose_from_table,
-        selection_mode="single-row",
+        selection_mode="single-cell",
     )
     if rows:
         job_ids = [str(row["job_id"]) for row in rows]
