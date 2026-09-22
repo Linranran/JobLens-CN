@@ -100,7 +100,6 @@ def main():
     )
     params.append(minimum_score)
     rows = [dict(row) for row in connection.execute(sql, params)]
-    st.subheader(f"Jobs ({len(rows)})")
     recommendation_labels = {
         "must_review": "重点关注",
         "recommended": "建议关注",
