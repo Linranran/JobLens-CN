@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest a reusable capability or data-source adapter
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What job-search workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the expected input, output, and user experience.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: compliance
+    attributes:
+      label: Data-source compliance
+      options:
+        - label: The proposal does not require bypassing access controls or violating a data source's terms.
+          required: true

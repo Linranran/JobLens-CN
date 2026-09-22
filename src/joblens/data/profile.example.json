@@ -1,0 +1,26 @@
+{
+  "name": "Example multimodal algorithm engineer",
+  "target_titles": ["算法工程师", "Machine Learning Engineer", "AI Engineer"],
+  "target_directions": ["OCR", "多模态", "VLM", "Agent", "内容安全"],
+  "preferred_locations": ["北京", "Remote"],
+  "excluded_terms": ["实习", "销售"],
+  "skills": [
+    "Python",
+    "PyTorch",
+    "OCR",
+    "VLM",
+    "LLM",
+    "Agent",
+    "RAG",
+    "MCP",
+    "FAISS",
+    "Docker",
+    "Linux",
+    "多模态",
+    "内容安全",
+    "目标检测",
+    "微调",
+    "推理优化",
+    "数据清洗"
+  ]
+}
